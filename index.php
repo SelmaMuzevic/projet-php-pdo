@@ -41,39 +41,88 @@ try{
 // en deuxieme et troisieme argument
 
 $db = new PDO('mysql:host=localhost;dbname=first_db', 'selma', 'ppp');
-
+$db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 // on utilise la méthode query de notre db PDO qui attend en argument une 
 // requette SQL classique.
 // ici on séléctionne tous les small_doggo.
 $query = $db->query('SELECT * FROM small_doggo');
 
 // on lui dit ensuite d'executer la requette
-$query->execute();
+//$query->execute();
 
 // on affiche le nom de notre premier chien de la table small_doggo avec fetch
 // on utilise le fetch() pour positionner le cursor sur la ligne de 
 // résultat suivant
 
-// on le fait à l'interieur d'une boucle while afin de recuperer tous les 
-// resultats de notre requete
 
-while($ligne = $query->fetch()){
-    
-   // Creer des instances de chiens a partir des lignes 
-   echo '<ul>';
-   
-   echo '<li>' .$ligne['id'] . '</li>'; 
-   echo '<li>' .$ligne['name'] . '</li>';
-   echo '<li>' .$ligne['race'] . '</li>';
-   echo '<li>' .$ligne['birthdate'] . '</li>';
-   echo '<li>' .$ligne['is_good'] . '</li>';
-       
-   echo '</ul>';
-}
 
 // $query->fetchAll() renvoie tous les resultats en tableau foreach($query 
 // as $value);  {} fonctionne 
+//$query->fetchAll();
+//foreach($query as $value){
+//echo $value;
 
+
+
+// on le fait à l'interieur d'une boucle while afin de recuperer tous les 
+// resultats de notre requete
+$doggos = [];
+while($ligne = $query->fetch()){
+    
+    // creer des instances de chien a partir des lignes
+    
+    $doggo = new SmallDoggo($ligne['name'], 
+                            $ligne['race'], 
+                            new DateTime($ligne['birthdate']),
+                            $ligne['is_good'], 
+                            $ligne['id']);
+        $doggos[]= $doggo;
+}
+echo '<pre>';
+var_dump($doggos);
+echo '</pre>';
+
+
+$id = 1;
+// prepare a la place de query, c'est la meme chose mais ça s'execute pas toute 
+// suite
+// :id c'est une placeholder
+$queryId = $db->prepare('SELECT * FROM small_doggo WHERE id = :id');
+$queryId->bindParam('id', $id, PDO::PARAM_INT);
+$queryId->execute();
+    
+    if($queryId->rowCount() == 1){
+        $ligneid = $queryId->fetch();
+        $doggo = new SmallDoggo($ligneid['name'], 
+                            $ligneid['race'], 
+                            new DateTime($ligneid['birthdate']),
+                            $ligneid['is_good'], 
+                            $ligneid['id']);
+        var_dump($doggo);
+    }
+    
+    
+    $name = 'bobi';
+    $race = 'berge-allemand';
+    $birthdate = '2006-12-04';
+    $isGood = true;
+    
+// on prepare notre requete avec ses parametres en placeholder   
+$queryInsert = $db->prepare('INSERT INTO small_doggo '
+                           . '(name, race, birthdate, is_good) ' 
+                           . 'VALUES (:name,:race,:birthdate,:isGood)');
+
+// on assigne les parametres 
+$queryInsert->bindValue('name', $name, PDO::PARAM_STR);
+$queryInsert->bindValue('race', $race, PDO::PARAM_STR);
+$queryInsert->bindValue('birthdate', $birthdate, PDO::PARAM_STR);
+$queryInsert->bindValue('isGood', $isGood, PDO::PARAM_BOOL);
+
+// on execute la requete 
+$queryInsert->execute();
+
+// on recupere l'id de la ligne qui vient d'etre ajoutee
+echo $db->lastInsertId();
 
 } catch(PDOException $exeption){
     echo $exeption->getMessage();
